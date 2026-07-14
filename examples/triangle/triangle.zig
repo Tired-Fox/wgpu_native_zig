@@ -10,7 +10,7 @@ const output_extent = wgpu.Extent3D {
 const output_bytes_per_row = 4 * output_extent.width;
 const output_size = output_bytes_per_row * output_extent.height;
 
-fn handleBufferMap(status: wgpu.MapAsyncStatus, _: wgpu.StringView, userdata1: ?*anyopaque, _: ?*anyopaque) callconv(.C) void {
+fn handleBufferMap(status: wgpu.MapAsyncStatus, _: wgpu.StringView, userdata1: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
     std.log.info("buffer_map status={x:.8}\n", .{@intFromEnum(status)});
     const complete: *bool = @ptrCast(@alignCast(userdata1));
     complete.* = true;
@@ -18,11 +18,11 @@ fn handleBufferMap(status: wgpu.MapAsyncStatus, _: wgpu.StringView, userdata1: ?
 
 // Based off of headless triangle example from https://github.com/eliemichel/LearnWebGPU-Code/tree/step030-headless
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const instance = wgpu.Instance.create(null).?;
     defer instance.release();
 
-    const adapter_request = instance.requestAdapterSync(&wgpu.RequestAdapterOptions {}, 0);
+    const adapter_request = instance.requestAdapterSync(&wgpu.RequestAdapterOptions {}, init.io, .fromNanoseconds(0));
     const adapter = switch(adapter_request.status) {
         .success => adapter_request.adapter.?,
         else => return error.NoAdapter,
@@ -31,7 +31,7 @@ pub fn main() !void {
 
     const device_request = adapter.requestDeviceSync(instance, &wgpu.DeviceDescriptor {
         .required_limits = null,
-    }, 0);
+    }, init.io, .fromNanoseconds(0));
     const device = switch(device_request.status) {
         .success => device_request.device.?,
         else => return error.NoDevice,
@@ -169,6 +169,6 @@ pub fn main() !void {
         defer staging_buffer.unmap();
 
         const output = buf[0..output_size];
-        try bmp.write24BitBMP("examples/output/triangle.bmp", output_extent.width, output_extent.height, output);
+        try bmp.write24BitBMP(init.io, "examples/output/triangle.bmp", output_extent.width, output_extent.height, output);
     }
 }
