@@ -21,18 +21,12 @@ const CallbackMode = _async.CallbackMode;
 
 const TextureFormat = @import("texture.zig").TextureFormat;
 
-pub const PushConstantRange = extern struct {
-    stages: ShaderStage,
-    start: u32,
-    end: u32,
-};
-
-pub const PipelineLayoutExtras = extern struct {
-    chain: ChainedStruct = ChainedStruct {
-        .s_type = SType.pipeline_layout_extras,
-    },
-    push_constant_range_count: usize,
-    push_constant_ranges: [*]const PushConstantRange,
+pub const PipelineStatisticName = enum(u32) {
+    vertex_shader_invocation   = 0x00000000,
+    clipper_invocation         = 0x00000001,
+    clipper_primitives_out     = 0x00000002,
+    fragment_shader_invocation = 0x00000003,
+    compute_shader_invocation  = 0x00000004,
 };
 
 pub const PipelineLayoutDescriptor = extern struct {
@@ -40,19 +34,7 @@ pub const PipelineLayoutDescriptor = extern struct {
     label: StringView = StringView {},
     bind_group_layout_count: usize,
     bind_group_layouts: [*]const *BindGroupLayout,
-
-    pub inline fn withPushConstantRanges(
-        self: PipelineLayoutDescriptor,
-        push_constant_range_count: usize,
-        push_constant_ranges: [*]const PushConstantRange
-    ) PipelineLayoutDescriptor {
-        var pld = self;
-        pld.next_in_chain = @ptrCast(&PipelineLayoutExtras {
-            .push_constant_range_count = push_constant_range_count,
-            .push_constant_ranges = push_constant_ranges,
-        });
-        return pld;
-    }
+    immediate_size: u32,
 };
 
 pub const PipelineLayoutProcs = struct {
@@ -95,6 +77,15 @@ pub const ProgrammableStageDescriptor = extern struct {
     constants: [*]const ConstantEntry = &[0]ConstantEntry {},
 };
 
+
+pub const ComputeState = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
+    module: ShaderModule,
+    entry_point: StringView,
+    constant_count: usize,
+    constants: [*]const ConstantEntry
+};
+
 pub const ComputePipelineDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     label: StringView = StringView {},
@@ -103,11 +94,11 @@ pub const ComputePipelineDescriptor = extern struct {
 };
 
 pub const CreatePipelineAsyncStatus = enum(u32) {
-    success          = 0x00000001,
-    instance_dropped = 0x00000002,
-    validation_error = 0x00000003,
-    internal_error   = 0x00000004,
-    unknown          = 0x00000005,
+    success            = 0x00000001,
+    callback_cancelled = 0x00000002,
+    validation_error   = 0x00000003,
+    internal_error     = 0x00000004,
+    unknown            = 0x00000005,
 };
 
 pub const CreateComputePipelineAsyncCallbackInfo = extern struct {
@@ -162,10 +153,9 @@ pub const ComputePipeline = opaque {
 };
 
 pub const VertexStepMode = enum(u32) {
-    vertex_buffer_not_used = 0x00000000, // This VertexBufferLayout is a "hole" in the VertexState `buffers` array.
-    @"undefined"           = 0x00000001, // Indicates no value is passed for this argument.
-    vertex                 = 0x00000002,
-    instance               = 0x00000003,
+    @"undefined"           = 0x00000000, // Indicates no value is passed for this argument.
+    vertex                 = 0x00000001,
+    instance               = 0x00000002,
 };
 
 pub const VertexFormat = enum(u32) {
@@ -213,12 +203,14 @@ pub const VertexFormat = enum(u32) {
 };
 
 pub const VertexAttribute = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
     format: VertexFormat,
     offset: u64,
     shader_location: u32,
 };
 
 pub const VertexBufferLayout = extern struct {
+    next_in_chain: ?*const ChainedStruct = null,
     // The step mode for the vertex buffer. If VertexStepMode.vertex_buffer_not_used,
     // indicates a "hole" in the parent VertexState `buffers` array:
     // the pipeline does not use a vertex buffer at this `location`.

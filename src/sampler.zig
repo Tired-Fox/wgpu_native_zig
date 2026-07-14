@@ -4,6 +4,9 @@ const _misc = @import("misc.zig");
 const CompareFunction = _misc.CompareFunction;
 const StringView = _misc.StringView;
 
+const _chained_struct = @import("chained_struct.zig");
+const SType = _chained_struct.SType;
+
 pub const SamplerBindingType = enum(u32) {
     // Indicates that this SamplerBindingLayout member of its parent BindGroupLayoutEntry is not used.
     binding_not_used = 0x00000000,
@@ -22,10 +25,19 @@ pub const SamplerBindingLayout = extern struct {
 };
 
 pub const AddressMode = enum(u32) {
-    @"undefined"  = 0x00000000, // Indicates no value is passed for this argument
-    clamp_to_edge = 0x00000001,
-    repeat        = 0x00000002,
-    mirror_repeat = 0x00000003,
+    @"undefined"    = 0x00000000, // Indicates no value is passed for this argument
+    clamp_to_edge   = 0x00000001,
+    repeat          = 0x00000002,
+    mirror_repeat   = 0x00000003,
+    clamp_to_border = 0x00000004,
+};
+
+pub const BorderColor = enum(u32) {
+    @"undefined" = 0x0000000,
+    transparent_black = 0x00000001,
+    opaque_black = 0x00000002,
+    opaque_white = 0x00000003,
+    zero = 0x00000004,
 };
 
 pub const FilterMode = enum(u32) {
@@ -53,6 +65,13 @@ pub const SamplerDescriptor = extern struct {
     lod_max_clamp: f32 = 32.0,
     compare: CompareFunction = CompareFunction.@"undefined",
     max_anisotropy: u16 = 1,
+};
+
+pub const SamplerDescriptorExtras = extern struct {
+    chain: ChainedStruct = ChainedStruct {
+        .s_type = SType.sampler_descriptor_extras
+    },
+    sampler_border_color: BorderColor,
 };
 
 pub const SamplerProcs = struct {

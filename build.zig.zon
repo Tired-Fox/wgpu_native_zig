@@ -146,8 +146,8 @@
             .lazy = true,
         },
         .wgpu_windows_x86_64_gnu_debug = .{
-            .url = "https://github.com/gfx-rs/wgpu-native/releases/download/v25.0.2.1/wgpu-windows-x86_64-gnu-debug.zip",
-            .hash = "N-V-__8AAFICSxIMF7kdKvI3pTwiLWmIxjSopWIadDt9yUpp",
+            .url = "https://github.com/gfx-rs/wgpu-native/releases/download/v29.0.1.1/wgpu-windows-x86_64-gnu-debug.zip",
+            .hash = "N-V-__8AAPVOkxGsAqpCyuH4Zn8ue9sJegu_rvZecZybtVu-",
             .lazy = true,
         },
         .wgpu_windows_x86_64_gnu_release = .{

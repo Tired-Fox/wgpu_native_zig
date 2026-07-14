@@ -45,12 +45,31 @@ pub const Limits = extern struct {
     max_compute_workgroup_size_y: u32 = WGPU_LIMIT_U32_UNDEFINED,
     max_compute_workgroup_size_z: u32 = WGPU_LIMIT_U32_UNDEFINED,
     max_compute_workgroups_per_dimension: u32 = WGPU_LIMIT_U32_UNDEFINED,
+    max_immediate_size: u32 = WGPU_LIMIT_U32_UNDEFINED,
 };
 
 pub const WGPUNativeLimits = extern struct {
     chain: ChainedStructOut = ChainedStructOut {
         .s_type = SType.native_limits,
     },
-    max_push_constant_size: u32,
+    /// Max number of live non-sampler bindings
     max_non_sampler_bindings: u32,
+    /// Max number of individual resources within binding arrays that can be accessed
+    /// in a single shader stage
+    max_binding_array_elements_per_shader_stage: u32,
+    /// Max number of individual samplers within arrays that can be accessed
+    /// in a single shader stage
+    max_binding_array_sampler_elements_per_shader_stage: u32,
+    /// Max number of views that can be used in multiview rendering
+    max_multiview_view_count: u32,
+};
+
+pub const CompatibilityModeLimits = extern struct {
+    chain: ChainedStruct = .{
+        .s_type = SType.compatibility_mode_limits,
+    },
+    max_storage_buffers_in_vertex_stage: u32,
+    max_storage_textures_in_vertex_stage: u32,
+    max_storage_buffers_in_fragment_stage: u32,
+    max_storage_textures_in_fragment_stage: u32,
 };

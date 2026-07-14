@@ -203,6 +203,19 @@ pub const CompositeAlphaMode = enum(u32) {
     inherit         = 0x00000004,
 };
 
+pub const PredefinedColorSpace = enum(u32) {
+    srgb = 0x00000001,
+    display_p3 = 0x00000002,
+};
+
+pub const ColorManagement = extern struct {
+    chain: ChainedStruct = .{
+        .s_type = SType.surface_color_management
+    },
+    color_space: PredefinedColorSpace,
+    tone_mapping_mode: ToneMappingMode,
+};
+
 // Describes when and in which order frames are presented on the screen when `::wgpuSurfacePresent` is called.
 pub const PresentMode = enum(u32) {
     // Present mode is not specified. Use the default.
@@ -309,30 +322,42 @@ pub const SurfaceCapabilities = extern struct {
 
 // The status enum for `::wgpuSurfaceGetCurrentTexture`.
 pub const GetCurrentTextureStatus = enum(u32) {
-    // Yay! Everything is good and we can render this frame.
+    /// Yay! Everything is good and we can render this frame.
     success_optimal    = 0x00000001,
 
-    // Still OK - the surface can present the frame, but in a suboptimal way.
-    // The surface may need reconfiguration.
+    /// Still OK - the surface can present the frame, but in a suboptimal way.
+    /// The surface may need reconfiguration.
     success_suboptimal = 0x00000002,
 
-    // Some operation timed out while trying to acquire the frame.
+    /// Some operation timed out while trying to acquire the frame.
     timeout            = 0x00000003,
 
-    // The surface is too different to be used, compared to when it was originally created.
+    /// The surface is too different to be used, compared to when it was originally created.
     outdated           = 0x00000004,
 
-    // The connection to whatever owns the surface was lost.
+    /// The connection to whatever owns the surface was lost.
     lost               = 0x00000005,
 
-    // The system ran out of memory.
+    /// The system ran out of memory.
     out_of_memory      = 0x00000006,
 
-    // The Device configured on the Surface was lost.
+    /// The Device configured on the Surface was lost.
     device_lost        = 0x00000007,
 
-    // The surface is not configured, or there was an OutStructChainError.
+    /// The surface is not configured, or there was an OutStructChainError.
     @"error"           = 0x00000008,
+
+    // -- wgpu-native --
+    
+    /// The surface texture was not acquired because the window is occluded
+    ///
+    /// > NOTE: currently this only occurs on Meta backend with macOS
+    occluded           = 0x00030001,
+};
+
+pub const ToneMappingMode = enum(u32) {
+    standard = 0x00000001,
+    extended = 0x00000002,
 };
 
 // Queried each frame from a Surface to get a Texture to render to along with some metadata.
@@ -356,6 +381,25 @@ pub const SurfaceProcs = struct {
     pub const Unconfigure = *const fn(*Surface) callconv(.c) void;
     pub const AddRef = *const fn(*Surface) callconv(.c) void;
     pub const Release = *const fn(*Surface) callconv(.c) void;
+};
+
+pub const SourceSwapchainPanel = extern struct {
+    chain: ChainedStruct,
+    /// A pointer to the ISwapChainPanelNative interface of the SwapChainPanel that will
+    /// be wrapped by the @ref WGPUSurface
+    panel: *anyopaque,
+};
+
+pub const PolygonMode = enum(u32) {
+    fill = 0,
+    line = 1,
+    point = 2,
+};
+
+pub const PrimitiveStateExtras = extern struct {
+    chain: ChainedStruct,
+    polygon_mode: PolygonMode,
+    conservative: WGPUBool,
 };
 
 extern fn wgpuSurfaceConfigure(surface: *Surface, config: *const SurfaceConfiguration) void;

@@ -5,11 +5,10 @@ const SType = _chained_struct.SType;
 const StringView = @import("misc.zig").StringView;
 
 pub const QueryType = enum(u32) {
+    /// Deprecated
     occlusion           = 0x00000001,
+    /// Deprecated
     timestamp           = 0x00000002,
-
-    // wgpu-native pipeline statistics
-    pipeline_statistics = 0x00030000,
 };
 
 pub const PipelineStatisticName = enum(u32) {

@@ -1,4 +1,6 @@
 // const StringView = @import("misc.zig").StringView;
+// const _misc = @import("misc.zig");
+// const StringView = _misc.StringView;
 
 // Generic function return type for wgpuGetProcAddress
 // pub const Proc = *const fn() callconv(.c) void;

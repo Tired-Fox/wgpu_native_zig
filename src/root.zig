@@ -144,7 +144,7 @@ pub const setLogCallback = _log.setLogCallback;
 pub const setLogLevel = _log.setLogLevel;
 
 const _pipeline = @import("pipeline.zig");
-pub const PushConstantRange = _pipeline.PushConstantRange;
+pub const ImmediateRange = _pipeline.ImmediateRange;
 pub const PipelineLayoutExtras = _pipeline.PipelineLayoutExtras;
 pub const PipelineLayoutDescriptor = _pipeline.PipelineLayoutDescriptor;
 pub const PipelineLayoutProcs = _pipeline.PipelineLayoutProcs;

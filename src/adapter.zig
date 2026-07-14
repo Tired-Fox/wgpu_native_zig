@@ -2,6 +2,7 @@ const std = @import("std");
 const Io = std.Io;
 
 const _chained_struct = @import("chained_struct.zig");
+const SType = _chained_struct.SType;
 const ChainedStruct = _chained_struct.ChainedStruct;
 const ChainedStructOut = _chained_struct.ChainedStructOut;
 
@@ -56,8 +57,16 @@ pub const BackendType = enum(u32) {
 };
 
 pub const FeatureLevel = enum(u32) {
+    @"undefined"  = 0x00000000,
     compatibility = 0x00000001, // "Compatibility" profile which can be supported on OpenGL ES 3.1.
     core          = 0x00000002, // "Core" profile which can be supported on Vulkan/Metal/D3D12.
+};
+
+pub const RequestAdapterWebXROptions = extern struct {
+    chain: ChainedStruct = .{
+        .s_type = SType.request_adapter_web_xr_options
+    },
+    xr_compatible: WGPUBool = @intFromBool(false),
 };
 
 pub const RequestAdapterOptions = extern struct {
@@ -86,11 +95,10 @@ pub const RequestAdapterOptions = extern struct {
 };
 
 pub const RequestAdapterStatus = enum(u32) {
-    success          = 0x00000001,
-    instance_dropped = 0x00000002,
-    unavailable      = 0x00000003,
-    @"error"         = 0x00000004,
-    unknown          = 0x00000005,
+    success             = 0x00000001,
+    callback_cancelled  = 0x00000002,
+    unavailable         = 0x00000003,
+    @"error"            = 0x00000004,
 };
 
 pub const RequestAdapterCallbackInfo = extern struct {
@@ -135,6 +143,8 @@ pub const AdapterInfo = extern struct {
     adapter_type: AdapterType,
     vendor_id: u32,
     device_id: u32,
+    subgroup_min_size: u32,
+    subgroup_max_size: u32,
 
     pub inline fn freeMembers(self: AdapterInfo) void {
         wgpuAdapterInfoFreeMembers(self);

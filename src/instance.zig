@@ -37,24 +37,41 @@ pub const InstanceBackends = struct {
     pub const gl             = @as(InstanceBackend, 0x00000002);
     pub const metal          = @as(InstanceBackend, 0x00000004);
     pub const dx12           = @as(InstanceBackend, 0x00000008);
+
+    /// Deprecated
     pub const dx11           = @as(InstanceBackend, 0x00000010);
+
     pub const browser_webgpu = @as(InstanceBackend, 0x00000020);
     pub const primary        = vulkan | metal | dx12 | browser_webgpu;
-    pub const secondary      = gl | dx11;
+    pub const secondary      = gl;
 };
 
 pub const InstanceFlag = WGPUFlags;
 pub const InstanceFlags = struct {
-    pub const default            = @as(InstanceFlag, 0x00000000);
-    pub const debug              = @as(InstanceFlag, 0x00000001);
-    pub const validation         = @as(InstanceFlag, 0x00000002);
-    pub const discard_hal_labels = @as(InstanceFlag, 0x00000004);
+    pub const empty              = @as(InstanceFlag, 0x00000000);
+    pub const debug              = @as(InstanceFlag, 1 << 0);
+    pub const validation         = @as(InstanceFlag, 1 << 1);
+    pub const discard_hal_labels = @as(InstanceFlag, 1 << 2);
+    pub const allow_underlying_non_compliant_adapter = @as(InstanceFlag, 1 << 3);
+    pub const gpu_based_validation = @as(InstanceFlag, 1 << 4);
+    pub const validation_indirect_call = @as(InstanceFlag, 1 << 5);
+    pub const automatic_timestamp_normalization = @as(InstanceFlag, 1 << 6);
+    pub const default = @as(InstanceFlag, 1 << 24);
+    pub const debugging = @as(InstanceFlag, 1 << 25);
+    pub const advanced_debugging = @as(InstanceFlag, 1 << 26);
+    pub const with_env = @as(InstanceFlag, 1 << 27);
 };
 
 pub const Dx12Compiler = enum(u32) {
     @"undefined" = 0x00000000,
     fxc          = 0x00000001,
     dxc          = 0x00000002,
+};
+
+pub const Dx12SwapchainKind = enum(u32) {
+    undefined        = 0x00000000,
+    dxgi_from_hwnd   = 0x00000001,
+    dxgi_from_visual = 0x00000002,
 };
 
 pub const Gles3MinorVersion = enum(u32) {
@@ -80,6 +97,41 @@ pub const GLFenceBehaviour = enum(u32) {
     gl_fence_behaviour_auto_finish = 0x00000001,
 };
 
+pub const DisplayHandleType = enum(u32) {
+    none    = 0x00000000,
+    xlib    = 0x00000001,
+    xcb     = 0x00000002,
+    wayland = 0x00000003,
+};
+
+pub const XlibDisplayHandle = extern struct {
+    /// Pointer to the X11 @c Display
+    display: *anyopaque,
+    /// X11 screen number
+    screen: i32,
+};
+
+pub const XcbDisplayHandle = extern struct {
+    /// Pointer to the XCB connection
+    connection: *anyopaque,
+    /// X11 screen number
+    screen: i32,
+};
+
+pub const WaylandDisplayHandle = extern struct {
+    /// Pointer to the Wayland display
+    display: *anyopaque
+};
+
+pub const DisplayHandle = extern struct {
+    @"type": DisplayHandleType,
+    data: extern union { 
+        xlib: XlibDisplayHandle,
+        xcb: XcbDisplayHandle,
+        wayland: WaylandDisplayHandle,
+    }
+};
+
 pub const InstanceExtras = extern struct {
     chain: ChainedStruct = ChainedStruct {
         .s_type = SType.instance_extras,
@@ -89,17 +141,19 @@ pub const InstanceExtras = extern struct {
     dx12_shader_compiler: Dx12Compiler,
     gles3_minor_version: Gles3MinorVersion,
     gl_fence_behavior: GLFenceBehaviour,
-    dxil_path: StringView = StringView {},
     dxc_path: StringView = StringView {},
     dxc_max_shader_model: DxcMaxShaderModel,
+    dx12_presenetation_system: Dx12SwapchainKind,
+
+    budget_for_device_creation: ?*const u8,
+    budget_for_device_loss: ?*const u8,
+
+    display_handle: DisplayHandle,
 };
 
-pub const InstanceCapabilities = extern struct {
+pub const InstanceLimits = extern struct {
     // This struct chain is used as mutable in some places and immutable in others.
     next_in_chain: ?*ChainedStructOut = null,
-
-    // Enable use of ::wgpuInstanceWaitAny with `timeoutNS > 0`.
-    timed_wait_any_enable: WGPUBool,
 
     // The maximum number FutureWaitInfo supported in a call to ::wgpuInstanceWaitAny with `timeoutNS > 0`.
     timed_wait_any_max_count: usize,
@@ -108,8 +162,9 @@ pub const InstanceCapabilities = extern struct {
 pub const InstanceDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
 
-    // Instance features to enable
-    features: InstanceCapabilities,
+    required_feature_count: usize,
+    required_features: [*]const InstanceFeatureName,
+    required_limits: ?*const InstanceLimits,
 
     pub inline fn withNativeExtras(self: InstanceDescriptor, extras: *InstanceExtras) InstanceDescriptor {
         var id = self;
@@ -118,11 +173,34 @@ pub const InstanceDescriptor = extern struct {
     }
 };
 
+extern fn wgpuSupportedInstanceFeaturesFreeMembers(supported_instance_features: SupportedInstanceFeatures) void;
+
+pub const SupportedInstanceFeatures = extern struct {
+    feature_count: usize,
+    features: [*]const InstanceFeatureName,
+
+    pub inline fn freeMembers(self: SupportedInstanceFeatures) void {
+        wgpuSupportedInstanceFeaturesFreeMembers(self);
+    }
+};
+
 pub const WGSLLanguageFeatureName = enum(u32) {
     readonly_and_readwrite_storage_textures = 0x00000001,
     packed4x8_integer_dot_product           = 0x00000002,
     unrestricted_pointer_parameters         = 0x00000003,
     pointer_composite_access                = 0x00000004,
+    uniform_buffer_standard_layout          = 0x00000005,
+    subgroup_id                             = 0x00000006,
+    texture_and_sampler_let                 = 0x00000007,
+    subgroup_uniformity                     = 0x00000008,
+    texture_formats_tier_1                  = 0x00000009,
+    linear_indexing                         = 0x0000000A,
+};
+
+pub const InstanceFeatureName = enum(u32) {
+    timed_wait_any = 0x00000001,
+    shader_source_spirv = 0x00000002,
+    multiple_devices_per_adapter = 0x00000003,
 };
 
 pub const SupportedWGSLLanguageFeaturesProcs = struct {
@@ -144,7 +222,8 @@ pub const SupportedWGSLLanguageFeatures = extern struct {
 
 pub const InstanceProcs = struct {
     pub const CreateInstance = *const fn(?*const InstanceDescriptor) callconv(.c) ?*Instance;
-    pub const GetCapabilities = *const fn(*InstanceCapabilities) callconv(.c) Status;
+    // TODO: Check if this is still valid or renamed
+    pub const GetCapabilities = *const fn(*InstanceLimits) callconv(.c) Status;
 
     pub const CreateSurface = *const fn(*Instance, *const SurfaceDescriptor) callconv(.c) ?*Surface;
     pub const GetWGSLLanguageFeatures = *const fn(*Instance, *SupportedWGSLLanguageFeatures) callconv(.c) Status;
@@ -160,9 +239,12 @@ pub const InstanceProcs = struct {
     // pub const EnumerateAdapters = *const fn(*Instance, ?*const EnumerateAdapterOptions, ?[*]Adapter) callconv(.c) usize;
 };
 
-extern fn wgpuGetInstanceCapabilities(capabilities: *InstanceCapabilities) Status;
+extern fn wgpuGetInstanceLimits(capabilities: *InstanceLimits) Status;
 
 extern fn wgpuCreateInstance(descriptor: ?*const InstanceDescriptor) ?*Instance;
+extern fn wgpuGetInstanceFeatures(features: *SupportedInstanceFeatures) void;
+extern fn wgpuHasInstanceFeature(features: InstanceFeatureName) WGPUBool;
+
 extern fn wgpuInstanceCreateSurface(instance: *Instance, descriptor: *const SurfaceDescriptor) ?*Surface;
 extern fn wgpuInstanceGetWGSLLanguageFeatures(instance: *Instance, features: *SupportedWGSLLanguageFeatures) Status;
 extern fn wgpuInstanceHasWGSLLanguageFeature(instance: *Instance, feature: WGSLLanguageFeatureName) WGPUBool;
@@ -219,10 +301,17 @@ pub const Instance = opaque {
         return wgpuCreateInstance(descriptor);
     }
 
+    pub inline fn getFeatures(features: *SupportedInstanceFeatures) void {
+        wgpuGetInstanceFeatures(features);
+    }
+    pub inline fn hasFeature(feature: InstanceFeatureName) bool {
+        return @bitCast(wgpuHasInstanceFeature(feature));
+    }
+
     // This is also a global function, but I think it would make sense being a member of Instance;
     // You'd use it like `const status = Instance.getCapabilities(&capabilities);`
-    pub inline fn getCapabilities(capabilities: *InstanceCapabilities) Status {
-        return wgpuGetInstanceCapabilities(capabilities);
+    pub inline fn getLimits(limits: *InstanceLimits) Status {
+        return wgpuGetInstanceLimits(limits);
     }
 
     pub inline fn createSurface(self: *Instance, descriptor: *const SurfaceDescriptor) ?*Surface {

@@ -17,14 +17,13 @@ pub const SubmissionIndex = u64;
 
 pub const QueueDescriptor = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
-    label: StringView = StringView {},
+    label: StringView = StringView{},
 };
 
 pub const WorkDoneStatus = enum(u32) {
-    success          = 0x00000001,
-    instance_dropped = 0x00000002,
-    @"error"         = 0x00000003,
-    unknown          = 0x00000004,
+    success = 0x00000001,
+    callback_cancelled = 0x00000002,
+    @"error" = 0x00000003,
 };
 
 pub const QueueWorkDoneCallbackInfo = extern struct {
@@ -38,16 +37,21 @@ pub const QueueWorkDoneCallbackInfo = extern struct {
     userdata2: ?*anyopaque = null,
 };
 
-pub const QueueWorkDoneCallback = *const fn(status: WorkDoneStatus, userdata1: ?*anyopaque, userdata2: ?*anyopaque) callconv(.c) void;
+pub const QueueWorkDoneCallback = *const fn (
+    status: WorkDoneStatus,
+    message: StringView,
+    userdata1: ?*anyopaque,
+    userdata2: ?*anyopaque,
+) callconv(.c) void;
 
 pub const QueueProcs = struct {
-    pub const OnSubmittedWorkDone = *const fn(*Queue, QueueWorkDoneCallbackInfo) callconv(.c) Future;
-    pub const SetLabel = *const fn(*Queue, StringView) callconv(.c) void;
-    pub const Submit = *const fn(*Queue, usize, [*]const *const CommandBuffer) callconv(.c) void;
-    pub const WriteBuffer = *const fn(*Queue, Buffer, u64, *const anyopaque, usize) callconv(.c) void;
-    pub const WriteTexture = *const fn(*Queue, *const TexelCopyTextureInfo, *const anyopaque, usize, *const TexelCopyBufferLayout, *const Extent3D) callconv(.c) void;
-    pub const AddRef = *const fn(*Queue) callconv(.c) void;
-    pub const Release = *const fn(*Queue) callconv(.c) void;
+    pub const OnSubmittedWorkDone = *const fn (*Queue, QueueWorkDoneCallbackInfo) callconv(.c) Future;
+    pub const SetLabel = *const fn (*Queue, StringView) callconv(.c) void;
+    pub const Submit = *const fn (*Queue, usize, [*]const *const CommandBuffer) callconv(.c) void;
+    pub const WriteBuffer = *const fn (*Queue, Buffer, u64, *const anyopaque, usize) callconv(.c) void;
+    pub const WriteTexture = *const fn (*Queue, *const TexelCopyTextureInfo, *const anyopaque, usize, *const TexelCopyBufferLayout, *const Extent3D) callconv(.c) void;
+    pub const AddRef = *const fn (*Queue) callconv(.c) void;
+    pub const Release = *const fn (*Queue) callconv(.c) void;
 
     // wgpu-native procs?
     // pub const SubmitForIndex = *const fn(*Queue, usize, [*]const *const CommandBuffer) callconv(.c) SubmissionIndex;
@@ -60,6 +64,9 @@ extern fn wgpuQueueWriteBuffer(queue: *Queue, buffer: *Buffer, buffer_offset: u6
 extern fn wgpuQueueWriteTexture(queue: *Queue, destination: *const TexelCopyTextureInfo, data: *const anyopaque, data_size: usize, data_layout: *const TexelCopyBufferLayout, write_size: *const Extent3D) void;
 extern fn wgpuQueueAddRef(queue: *Queue) void;
 extern fn wgpuQueueRelease(queue: *Queue) void;
+// -- wgpu-native --
+extern fn wgpuQueueGetNativeMetalCommandQueue(queue: *Queue) *anyopaque;
+extern fn wgpuQueueGetTimestampPeriod(queue: *Queue) f32;
 
 // wgpu-native
 extern fn wgpuQueueSubmitForIndex(queue: *Queue, command_count: usize, commands: [*]const *const CommandBuffer) SubmissionIndex;
@@ -67,6 +74,10 @@ extern fn wgpuQueueSubmitForIndex(queue: *Queue, command_count: usize, commands:
 pub const Queue = opaque {
     pub inline fn onSubmittedWorkDone(self: *Queue, callback_info: QueueWorkDoneCallbackInfo) Future {
         return wgpuQueueOnSubmittedWorkDone(self, callback_info);
+    }
+
+    pub inline fn getTimestampPeriod(self: *Queue) f32 {
+        return wgpuQueueGetTimestampPeriod(self);
     }
 
     // Unimplemented as of wgpu-native v25.0.2.1,
@@ -97,4 +108,10 @@ pub const Queue = opaque {
     pub inline fn submitForIndex(self: *Queue, commands: []const *const CommandBuffer) SubmissionIndex {
         return wgpuQueueSubmitForIndex(self, commands.len, commands.ptr);
     }
+
+    /// Extracts low-level Apple Metal command queue (MTLCommandQueue)
+    pub inline fn getNativeMetalCommandQueue(self: *Queue) *anyopaque {
+        return wgpuQueueGetNativeMetalCommandQueue(self);
+    }
 };
+
