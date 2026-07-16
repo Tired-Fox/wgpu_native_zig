@@ -17,7 +17,7 @@ pub const WGPU_COPY_STRIDE_UNDEFINED = U32_MAX;
 const Buffer = @import("buffer.zig").Buffer;
 
 pub const TextureFormat = enum(u32) {
-    undefined                       = 0x00000000,
+    @"undefined"                    = 0x00000000,
     r8_unorm                        = 0x00000001,
     r8_snorm                        = 0x00000002,
     r8_uint                         = 0x00000003,

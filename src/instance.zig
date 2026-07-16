@@ -69,7 +69,7 @@ pub const Dx12Compiler = enum(u32) {
 };
 
 pub const Dx12SwapchainKind = enum(u32) {
-    undefined        = 0x00000000,
+    @"undefined"     = 0x00000000,
     dxgi_from_hwnd   = 0x00000001,
     dxgi_from_visual = 0x00000002,
 };
