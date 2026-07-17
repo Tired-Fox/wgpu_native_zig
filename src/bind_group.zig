@@ -38,6 +38,7 @@ pub const BindGroupLayoutEntry = extern struct {
     next_in_chain: ?*const ChainedStruct = null,
     binding: u32,
     visibility: ShaderStage,
+    binding_array_size: u32 = 0,
     buffer: BufferBindingLayout = BufferBindingLayout {
         .@"type" = BufferBindingType.binding_not_used,
     },
